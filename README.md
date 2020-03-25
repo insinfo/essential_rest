@@ -9,7 +9,7 @@ import 'package:essential_rest/essential_rest.dart';
 import 'package:essential_rest/src/response_list.dart';
 
 //entity model definition
-class ExampleModel implements MapSerialization<ExampleModel> {
+class ExampleModel {
   int id;
   int userId;
   String title;
@@ -25,18 +25,8 @@ class ExampleModel implements MapSerialization<ExampleModel> {
   }
 
   @override
-  ExampleModel fromMap(Map<String, dynamic> json) {
-    var item = ExampleModel();
-    item.userId = json['userId'];
-    item.id = json['id'];
-    item.title = json['title'];
-    item.completed = json['completed'];
-    return item;
-  }
-
-  @override
   Map<String, dynamic> toMap() {
-    final data = {};
+    final data = Map<String, dynamic>();
     data['userId'] = userId;
     data['id'] = id;
     data['title'] = title;
@@ -60,7 +50,12 @@ void main() async {
   //get single ExampleModel
   resp = await rest.get('/todos/1');
   var item = resp.resultT;
-  print('single item: ${item.title}');  
+  print('single item: ${item.title}');
+
+  //create new item
+  resp = await rest.post('/todos', body: ExampleModel(title: 'test').toMap());
+  print('create item: ${resp.status}');
 }
+
 ```
 

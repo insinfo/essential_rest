@@ -3,7 +3,7 @@ import 'dart:convert';
 //import 'html_fake.dart' if (condition) 'dart:html';
 import 'package:universal_html/prefer_universal/html.dart';
 import 'essential_uri.dart';
-import 'map_serialization.dart';
+//import 'map_serialization.dart';
 import 'rest_response.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -216,7 +216,7 @@ class RestClientGeneric<T> {
         port: hostPort,
         basePath: basePath,
       );
-    
+
       headers ??= headersDefault;
 
       //Obtem da REST API se o cache estiver vazio, vencido ou desativado
@@ -325,7 +325,6 @@ class RestClientGeneric<T> {
           status: RestStatus.SUCCESS,
           dataTypedList: list,
           statusCode: 200);
-
     } catch (e) {
       print('RestClientGeneric@getAll ${e}');
       return RestResponseGeneric(message: 'Erro ${e}', status: RestStatus.DANGER, statusCode: 400);
@@ -597,6 +596,43 @@ class RestClientGeneric<T> {
     }
   }
 
+  RestStatus _intToStatus(int statusCode) {
+    var status = RestStatus.DANGER;
+    switch (statusCode) {
+      case 200: //SUCCESS
+        {
+          status = RestStatus.SUCCESS;
+        }
+        break;
+      case 201: //Created
+        {
+          status = RestStatus.SUCCESS;
+        }
+        break;
+      case 401: //Unauthorized
+        {
+          status = RestStatus.UNAUTHORIZED;
+        }
+        break;
+      case 400: //Bad Request
+        {
+          status = RestStatus.DANGER;
+        }
+        break;
+      case 409: //Conflict
+        {
+          status = RestStatus.CONFLICT;
+        }
+        break;
+      default:
+        {
+          status = RestStatus.DANGER;
+        }
+        break;
+    }
+    return status;
+  }
+
   Future<RestResponseGeneric> post(
     String apiEndPoint, {
     Map<String, String> headers,
@@ -607,6 +643,7 @@ class RestClientGeneric<T> {
     String protocol,
     String hosting,
     int hostPort,
+    ReturnType returnType,
   }) async {
     try {
       var url = uri(
@@ -619,63 +656,37 @@ class RestClientGeneric<T> {
       );
 
       headers ??= headersDefault;
+      encoding ??= Utf8Codec();
 
-      var resp = await client.post(url, body: jsonEncode(body), encoding: Utf8Codec(), headers: headers);
+      var resp = await client.post(url, body: jsonEncode(body), encoding: encoding, headers: headers);
       var message = '${resp.body}';
       var exception = '${resp.body}';
-
-      if (resp.statusCode == 200) {
-        return RestResponseGeneric(
-            message: 'Sucesso', status: RestStatus.SUCCESS, data: jsonDecode(resp.body), statusCode: resp.statusCode);
-      }
-
-      if (resp.statusCode == 401) {
-        var jsonDecoded = jsonDecode(resp.body);
-        if (jsonDecoded is Map) {
-          if (jsonDecoded.containsKey('message')) {
-            message = jsonDecoded['message'];
-          }
-          if (jsonDecoded.containsKey('exception')) {
-            exception = jsonDecoded['exception'];
-          }
+      
+      var jsonDecoded = jsonDecode(resp.body);
+      if (jsonDecoded is Map) {
+        if (jsonDecoded.containsKey('message')) {
+          message = jsonDecoded['message'];
         }
-
-        return RestResponseGeneric<T>(
-            message: message, exception: exception, status: RestStatus.UNAUTHORIZED, statusCode: resp.statusCode);
-      }
-      if (resp.statusCode == 400) {
-        var jsonDecoded = jsonDecode(resp.body);
-        if (jsonDecoded is Map) {
-          if (jsonDecoded.containsKey('message')) {
-            message = jsonDecoded['message'];
-          }
-          if (jsonDecoded.containsKey('exception')) {
-            exception = jsonDecoded['exception'];
-          }
+        if (jsonDecoded.containsKey('exception')) {
+          exception = jsonDecoded['exception'];
         }
-        return RestResponseGeneric<T>(
-            message: message, exception: exception, status: RestStatus.DANGER, statusCode: resp.statusCode);
-      }
-      //um item ja cadastrado
-      if (resp.statusCode == 409) {
-        var jsonDecoded = jsonDecode(resp.body);
-        if (jsonDecoded is Map) {
-          if (jsonDecoded.containsKey('message')) {
-            message = jsonDecoded['message'];
-          }
-          if (jsonDecoded.containsKey('exception')) {
-            exception = jsonDecoded['exception'];
-          }
-        }
-        return RestResponseGeneric<T>(
-            message: message, exception: exception, status: RestStatus.CONFLICT, statusCode: resp.statusCode);
       }
 
-      return RestResponseGeneric(message: '${resp.body}', status: RestStatus.DANGER, statusCode: resp.statusCode);
+      return RestResponseGeneric(
+        message: message,
+        exception: exception,
+        status: _intToStatus(resp.statusCode),
+        data: jsonDecoded,
+        statusCode: resp.statusCode,
+      );
     } catch (e) {
       print('RestClientGeneric@post ${e}');
       return RestResponseGeneric(
-          message: '${e}', exception: 'Exception ${e}', status: RestStatus.DANGER, statusCode: 400);
+        message: '${e}',
+        exception: 'Exception ${e}',
+        status: RestStatus.DANGER,
+        statusCode: 400,
+      );
     }
   }
 

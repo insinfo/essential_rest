@@ -1,9 +1,10 @@
 //import 'html_fake.dart' if (condition) 'dart:html';
-import 'package:universal_html/prefer_universal/html.dart';
+//import 'package:universal_html/prefer_universal/html.dart';
 
 ///The protocol of the URL. Possible values:
 ///file: ftp: http: https: mailto: etc..
 enum ProtocolType { http, https, notDefine }
+enum ReturnType { list, single }
 
 /*class EssentialUri {
   String host;

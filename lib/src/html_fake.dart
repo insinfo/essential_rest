@@ -1,4 +1,4 @@
-import 'dart:collection';
+/*import 'dart:collection';
 
 class Window {
   Storage get sessionStorage {
@@ -85,3 +85,4 @@ class HttpRequest {
 
   String responseText = 's';
 }
+*/
