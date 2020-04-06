@@ -1,6 +1,6 @@
 name: essential_rest
 description: A Dart library to facilitate service consumption and API Rest, without the need for automatic code generation or reflection it does the JSON mapping for the Entity, besides allowing to keep the data in CACHE using Local Storage for fast loading and load reduction to the Server
-version: 1.0.2
+version: 1.0.3
 homepage: https://github.com/insinfo/essential_rest
 authors: 
   - Isaque Neves <insinfo2008@gmail.com> 
@@ -11,7 +11,7 @@ environment:
 
 dependencies:
   http: '>=0.12.0 <1.0.0'
-  universal_html: ^1.1.20
+  universal_html: '>=1.1.11 <1.2.0'
   http_parser: '>=3.1.2 <4.0.0'
 
 dev_dependencies:
