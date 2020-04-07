@@ -6,6 +6,7 @@ class RList<E> extends ListBase<E> {
   //int get length => this.length;
 
   final List<E> l = [];
+  
   RList();
 
   @override

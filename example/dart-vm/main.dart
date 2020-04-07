@@ -1,5 +1,4 @@
 import 'package:essential_rest/essential_rest.dart';
-import 'package:essential_rest/src/response_list.dart';
 
 //entity model definition
 class ExampleModel {
@@ -19,7 +18,7 @@ class ExampleModel {
 
   @override
   Map<String, dynamic> toMap() {
-    final data = Map<String, dynamic>();
+    final data = <String, dynamic>{};
     data['userId'] = userId;
     data['id'] = id;
     data['title'] = title;
