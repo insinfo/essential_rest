@@ -45,6 +45,6 @@ void main() async {
   print('single item: ${item.title}');
 
   //create new item ExampleModel
-  resp = await rest.post('/todos', body: ExampleModel(title: 'test').toMap());
-  print('create item: ${resp.status}');
+  var resps = await rest.post('/todos', body: ExampleModel(title: 'test').toMap());
+  print('create item: ${resps.status}');
 }
