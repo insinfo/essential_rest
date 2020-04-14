@@ -26,7 +26,8 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   RList<ExampleModel> list = RList<ExampleModel>();
-  var rest = RestClientGeneric<ExampleModel>(factory: {ExampleModel: (x) => ExampleModel.fromMap(x)});
+  var rest = RestClientGeneric<ExampleModel>(
+      factory: {ExampleModel: (x) => ExampleModel.fromMap(x)});
 
   @override
   void initState() {
@@ -75,7 +76,6 @@ class ExampleModel {
     completed = json['completed'];
   }
 
-  @override
   Map<String, dynamic> toMap() {
     final data = <String, dynamic>{};
     data['userId'] = userId;

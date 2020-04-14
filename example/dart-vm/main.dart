@@ -16,7 +16,6 @@ class ExampleModel {
     completed = json['completed'];
   }
 
-  @override
   Map<String, dynamic> toMap() {
     final data = <String, dynamic>{};
     data['userId'] = userId;
@@ -28,13 +27,14 @@ class ExampleModel {
 }
 
 void main() async {
-  var rest = RestClientGeneric<ExampleModel>(factory: {ExampleModel: (x) => ExampleModel.fromMap(x)});
+  var rest = RestClientGeneric<ExampleModel>(
+      factory: {ExampleModel: (x) => ExampleModel.fromMap(x)});
   rest.protocol = ProtocolType.https;
   rest.host = 'jsonplaceholder.typicode.com';
 
   //get list of ExampleModel
   var resp = await rest.getAll('/todos');
-  RList<ExampleModel> list = resp.resultListT;
+  var list = resp.resultListT;
   list.forEach((item) {
     print('list item: ${item.title}');
   });
@@ -45,6 +45,7 @@ void main() async {
   print('single item: ${item.title}');
 
   //create new item ExampleModel
-  var resps = await rest.post('/todos', body: ExampleModel(title: 'test').toMap());
+  var resps =
+      await rest.post('/todos', body: ExampleModel(title: 'test').toMap());
   print('create item: ${resps.status}');
 }

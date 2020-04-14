@@ -11,7 +11,8 @@ class AppComponent implements OnInit {
   RList<ExampleModel> list;
   @override
   void ngOnInit() async {
-    var rest = RestClientGeneric<ExampleModel>(factory: {ExampleModel: (x) => ExampleModel.fromMap(x)});
+    var rest = RestClientGeneric<ExampleModel>(
+        factory: {ExampleModel: (x) => ExampleModel.fromMap(x)});
     rest.protocol = ProtocolType.https;
     rest.host = 'jsonplaceholder.typicode.com';
 
@@ -40,7 +41,6 @@ class ExampleModel {
     completed = json['completed'];
   }
 
-  @override
   Map<String, dynamic> toMap() {
     final data = <String, dynamic>{};
     data['userId'] = userId;

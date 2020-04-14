@@ -1,8 +1,26 @@
 import 'response_list.dart';
 
 //Unauthorized
-enum RestStatus { WARNING, SUCCESS, DANGER, INFO, UNAUTHORIZED, NOCONTENT, CONFLICT }
-enum RestClientMethod { GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH }
+enum RestStatus {
+  WARNING,
+  SUCCESS,
+  DANGER,
+  INFO,
+  UNAUTHORIZED,
+  NOCONTENT,
+  CONFLICT
+}
+enum RestClientMethod {
+  GET,
+  HEAD,
+  POST,
+  PUT,
+  DELETE,
+  CONNECT,
+  OPTIONS,
+  TRACE,
+  PATCH
+}
 
 class RestResponseGeneric<T> extends RestResponse {
   T dataTyped;
