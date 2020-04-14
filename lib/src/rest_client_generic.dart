@@ -87,8 +87,8 @@ class RestClientGeneric<T> {
       this.port = port;
     }
 
-    basePath ??= '';
-    apiEndPoint = '$basePath$apiEndPoint';
+    this.basePath ??= '';
+    apiEndPoint = '${this.basePath}$apiEndPoint';
     var proLen = window.location.protocol.length;
 
     var scheme = '';
