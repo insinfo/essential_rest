@@ -30,8 +30,7 @@ class RestClientGeneric<T> {
   bool _isShouldRefresh(String key) {
     return (isInLocalStorage(key) == false ||
         _getLastFetchTime(key) == null ||
-        _getLastFetchTime(key)
-            .isBefore(DateTime.now().subtract(cacheValidDuration)));
+        _getLastFetchTime(key).isBefore(DateTime.now().subtract(cacheValidDuration)));
   }
 
   http.Client client;
@@ -53,8 +52,7 @@ class RestClientGeneric<T> {
   static Map<String, String> headersDefault = {
     'Content-type': 'application/json',
     'Accept': 'application/json',
-    'Authorization':
-        'Bearer ' + window.sessionStorage['YWNjZXNzX3Rva2Vu'].toString()
+    'Authorization': 'Bearer ' + window.sessionStorage['YWNjZXNzX3Rva2Vu'].toString()
   };
 
   Uri uri(
@@ -78,9 +76,7 @@ class RestClientGeneric<T> {
     }
 
     if (this.host == null) {
-      this.host = window.location.host.contains(':')
-          ? defaultHost
-          : window.location.host;
+      this.host = window.location.host.contains(':') ? defaultHost : window.location.host;
     }
 
     if (setHostFromBrowser) {
@@ -98,8 +94,7 @@ class RestClientGeneric<T> {
     var scheme = '';
     if (protocol != null) {
       scheme = protocol;
-    } else if (this.protocol == ProtocolType.notDefine ||
-        this.protocol == null) {
+    } else if (this.protocol == ProtocolType.notDefine || this.protocol == null) {
       scheme = window.location.protocol.substring(0, proLen - 1);
       if (window.location.protocol.contains('memory')) {
         scheme = 'http';
@@ -157,8 +152,7 @@ class RestClientGeneric<T> {
       var headersDefault = {
         //'Content-type': 'application/json',
         // 'Accept': 'application/json',
-        'Authorization':
-            'Bearer ' + window.sessionStorage['YWNjZXNzX3Rva2Vu'].toString()
+        'Authorization': 'Bearer ' + window.sessionStorage['YWNjZXNzX3Rva2Vu'].toString()
       };
       var request = http.MultipartRequest('POST', url);
 
@@ -177,10 +171,8 @@ class RestClientGeneric<T> {
         for (var file in files) {
           reader.readAsArrayBuffer(file);
           await reader.onLoadEnd.first;
-          request.files.add(await http.MultipartFile.fromBytes(
-              'file[]', reader.result,
-              contentType: MediaType('application', 'octet-stream'),
-              filename: file.name));
+          request.files.add(await http.MultipartFile.fromBytes('file[]', reader.result,
+              contentType: MediaType('application', 'octet-stream'), filename: file.name));
         }
       }
 
@@ -197,10 +189,8 @@ class RestClientGeneric<T> {
         statusCode: 200,
       );
     } catch (e, stacktrace) {
-      print(
-          'RestClientGeneric@uploadFiles exception: ${e} stacktrace: ${stacktrace}');
-      return RestResponseGeneric(
-          message: 'Erro ${e}', status: RestStatus.DANGER, statusCode: 400);
+      print('RestClientGeneric@uploadFiles exception: ${e} stacktrace: ${stacktrace}');
+      return RestResponseGeneric(message: 'Erro ${e}', status: RestStatus.DANGER, statusCode: 400);
     }
   }
 
@@ -216,6 +206,7 @@ class RestClientGeneric<T> {
     String protocol,
     String hosting,
     int hostPort,
+    String encoding,
   }) async {
     try {
       var url = uri(
@@ -236,25 +227,27 @@ class RestClientGeneric<T> {
         if (method == null) {
           resp = await client.get(url, headers: headers);
         } else if (method == RestClientMethod.POST) {
-          resp =
-              await client.post(url, headers: headers, body: jsonEncode(body));
+          resp = await client.post(url, headers: headers, body: jsonEncode(body));
         } else {
           resp = await client.get(url, headers: headers);
         }
 
-        var totalReH = resp.headers.containsKey('total-records')
-            ? resp.headers['total-records']
-            : null;
+        var totalReH = resp.headers.containsKey('total-records') ? resp.headers['total-records'] : null;
         var totalRecords = totalReH != null ? int.tryParse(totalReH) : 0;
         var message = '${resp.body}';
         var exception = '${resp.body}';
-        var jsonDecoded = jsonDecode(resp.body);
+
+        var respBody = resp.body;
+        if (encoding == 'utf8') {
+          respBody = utf8.encode(respBody).toString();
+        }
+
+        var jsonDecoded = jsonDecode(respBody);
         //print("from API");
         if (resp.statusCode == 200) {
           //coloca no cache
           if (disableAllCache == false) {
-            _setToLocalStorage(url.toString(), resp.body,
-                headers: resp.headers);
+            _setToLocalStorage(url.toString(), resp.body, headers: resp.headers);
           }
 
           var list = RList<T>();
@@ -290,10 +283,7 @@ class RestClientGeneric<T> {
           }
 
           return RestResponseGeneric<T>(
-              message: message,
-              exception: exception,
-              status: RestStatus.UNAUTHORIZED,
-              statusCode: resp.statusCode);
+              message: message, exception: exception, status: RestStatus.UNAUTHORIZED, statusCode: resp.statusCode);
         }
         //um item ja cadastrado
         if (resp.statusCode == 409) {
@@ -307,10 +297,7 @@ class RestClientGeneric<T> {
             }
           }
           return RestResponseGeneric<T>(
-              message: message,
-              exception: exception,
-              status: RestStatus.CONFLICT,
-              statusCode: resp.statusCode);
+              message: message, exception: exception, status: RestStatus.CONFLICT, statusCode: resp.statusCode);
         }
         //204 no content tabela vazia ou nenhum item correspondente
         else if (resp.statusCode == 204) {
@@ -324,10 +311,7 @@ class RestClientGeneric<T> {
         //
         else {
           return RestResponseGeneric<T>(
-              message: message,
-              exception: exception,
-              status: RestStatus.DANGER,
-              statusCode: resp.statusCode);
+              message: message, exception: exception, status: RestStatus.DANGER, statusCode: resp.statusCode);
         }
       }
 
@@ -350,8 +334,7 @@ class RestClientGeneric<T> {
           statusCode: 200);
     } catch (e) {
       print('RestClientGeneric@getAll ${e}');
-      return RestResponseGeneric(
-          message: 'Erro ${e}', status: RestStatus.DANGER, statusCode: 400);
+      return RestResponseGeneric(message: 'Erro ${e}', status: RestStatus.DANGER, statusCode: 400);
     }
   }
 
@@ -367,6 +350,7 @@ class RestClientGeneric<T> {
     String protocol,
     String hosting,
     int hostPort,
+    String encoding,
   }) async {
     try {
       var url = uri(
@@ -387,28 +371,30 @@ class RestClientGeneric<T> {
         if (method == null) {
           resp = await client.get(url, headers: headers);
         } else if (method == RestClientMethod.POST) {
-          resp =
-              await client.post(url, headers: headers, body: jsonEncode(body));
+          resp = await client.post(url, headers: headers, body: jsonEncode(body));
         } else {
           resp = await client.get(url, headers: headers);
         }
 
         var message = '${resp.body}';
         var exception = '${resp.body}';
-        var totalReH = resp.headers.containsKey('total-records')
-            ? resp.headers['total-records']
-            : null;
+        var totalReH = resp.headers.containsKey('total-records') ? resp.headers['total-records'] : null;
         var totalRecords = totalReH != null ? int.tryParse(totalReH) : 0;
         //se ouver sucesso
         if (resp.statusCode == 200) {
           //coloca no cache
           if (disableAllCache) {
-            _setToLocalStorage(url.toString(), resp.body,
-                headers: resp.headers);
+            _setToLocalStorage(url.toString(), resp.body, headers: resp.headers);
           }
 
           var result;
-          var parsedJson = jsonDecode(resp.body);
+          var respBody = resp.body;
+
+          if (encoding == 'utf8') {
+            respBody = utf8.encode(respBody).toString();
+          }
+
+          var parsedJson = jsonDecode(respBody);
           if (topNode != null) {
             result = factory[T](parsedJson[topNode]);
           } else {
@@ -435,10 +421,7 @@ class RestClientGeneric<T> {
           }
 
           return RestResponseGeneric<T>(
-              message: message,
-              exception: exception,
-              status: RestStatus.UNAUTHORIZED,
-              statusCode: resp.statusCode);
+              message: message, exception: exception, status: RestStatus.UNAUTHORIZED, statusCode: resp.statusCode);
         }
         //um item ja cadastrado
         if (resp.statusCode == 409) {
@@ -452,10 +435,7 @@ class RestClientGeneric<T> {
             }
           }
           return RestResponseGeneric<T>(
-              message: message,
-              exception: exception,
-              status: RestStatus.CONFLICT,
-              statusCode: resp.statusCode);
+              message: message, exception: exception, status: RestStatus.CONFLICT, statusCode: resp.statusCode);
         }
         //no content
         else if (resp.statusCode == 204) {
@@ -466,10 +446,7 @@ class RestClientGeneric<T> {
               statusCode: resp.statusCode);
         } else {
           return RestResponseGeneric<T>(
-              message: message,
-              exception: exception,
-              status: RestStatus.DANGER,
-              statusCode: resp.statusCode);
+              message: message, exception: exception, status: RestStatus.DANGER, statusCode: resp.statusCode);
         }
       }
 
@@ -477,18 +454,11 @@ class RestClientGeneric<T> {
       var result = data['data'];
 
       return RestResponseGeneric<T>(
-          totalRecords: 10,
-          message: 'Sucesso',
-          status: RestStatus.SUCCESS,
-          dataTyped: result,
-          statusCode: 200);
+          totalRecords: 10, message: 'Sucesso', status: RestStatus.SUCCESS, dataTyped: result, statusCode: 200);
     } catch (e) {
       print('RestClientGeneric@get ${e}');
       return RestResponseGeneric(
-          message: 'Erro ${e}',
-          exception: 'Exception ${e}',
-          status: RestStatus.DANGER,
-          statusCode: 400);
+          message: 'Erro ${e}', exception: 'Exception ${e}', status: RestStatus.DANGER, statusCode: 400);
     }
   }
 
@@ -538,8 +508,7 @@ class RestClientGeneric<T> {
     }
   }
 
-  void _setToLocalStorage(String key, String value,
-      {Map<String, String> headers}) {
+  void _setToLocalStorage(String key, String value, {Map<String, String> headers}) {
     _setLastFetchTime(key, DateTime.now());
     window.localStorage[key] = value;
     if (headers != null) {
@@ -583,17 +552,13 @@ class RestClientGeneric<T> {
       encoding ??= Utf8Codec();
       headers ??= headersDefault;
 
-      var resp = await client.put(url,
-          body: jsonEncode(body), encoding: encoding, headers: headers);
+      var resp = await client.put(url, body: jsonEncode(body), encoding: encoding, headers: headers);
       var message = '${resp.body}';
       var exception = '${resp.body}';
 
       if (resp.statusCode == 200) {
         return RestResponseGeneric(
-            message: 'Sucesso',
-            status: RestStatus.SUCCESS,
-            data: jsonDecode(resp.body),
-            statusCode: resp.statusCode);
+            message: 'Sucesso', status: RestStatus.SUCCESS, data: jsonDecode(resp.body), statusCode: resp.statusCode);
       }
       if (resp.statusCode == 401) {
         var jsonDecoded = jsonDecode(resp.body);
@@ -607,10 +572,7 @@ class RestClientGeneric<T> {
         }
 
         return RestResponseGeneric<T>(
-            message: message,
-            exception: exception,
-            status: RestStatus.UNAUTHORIZED,
-            statusCode: resp.statusCode);
+            message: message, exception: exception, status: RestStatus.UNAUTHORIZED, statusCode: resp.statusCode);
       }
       if (resp.statusCode == 400) {
         var jsonDecoded = jsonDecode(resp.body);
@@ -623,10 +585,7 @@ class RestClientGeneric<T> {
           }
         }
         return RestResponseGeneric<T>(
-            message: message,
-            exception: exception,
-            status: RestStatus.DANGER,
-            statusCode: resp.statusCode);
+            message: message, exception: exception, status: RestStatus.DANGER, statusCode: resp.statusCode);
       }
       //um item ja cadastrado
       if (resp.statusCode == 409) {
@@ -640,23 +599,14 @@ class RestClientGeneric<T> {
           }
         }
         return RestResponseGeneric<T>(
-            message: message,
-            exception: exception,
-            status: RestStatus.CONFLICT,
-            statusCode: resp.statusCode);
+            message: message, exception: exception, status: RestStatus.CONFLICT, statusCode: resp.statusCode);
       }
 
-      return RestResponseGeneric(
-          message: message,
-          status: RestStatus.DANGER,
-          statusCode: resp.statusCode);
+      return RestResponseGeneric(message: message, status: RestStatus.DANGER, statusCode: resp.statusCode);
     } catch (e) {
       print('RestClientGeneric@put ${e}');
       return RestResponseGeneric(
-          message: '${e}',
-          exception: 'Exception ${e}',
-          status: RestStatus.DANGER,
-          statusCode: 400);
+          message: '${e}', exception: 'Exception ${e}', status: RestStatus.DANGER, statusCode: 400);
     }
   }
 
@@ -722,8 +672,7 @@ class RestClientGeneric<T> {
       headers ??= headersDefault;
       encoding ??= Utf8Codec();
 
-      var resp = await client.post(url,
-          body: jsonEncode(body), encoding: encoding, headers: headers);
+      var resp = await client.post(url, body: jsonEncode(body), encoding: encoding, headers: headers);
       var message = '${resp.body}';
       var exception = '${resp.body}';
 
@@ -815,10 +764,7 @@ class RestClientGeneric<T> {
         }
 
         return RestResponseGeneric<T>(
-            message: message,
-            exception: exception,
-            status: RestStatus.UNAUTHORIZED,
-            statusCode: request.status);
+            message: message, exception: exception, status: RestStatus.UNAUTHORIZED, statusCode: request.status);
       }
       if (request.status == 400) {
         var jsonDecoded = jsonDecode(request.responseText);
@@ -831,10 +777,7 @@ class RestClientGeneric<T> {
           }
         }
         return RestResponseGeneric<T>(
-            message: message,
-            exception: exception,
-            status: RestStatus.DANGER,
-            statusCode: request.status);
+            message: message, exception: exception, status: RestStatus.DANGER, statusCode: request.status);
       }
       //um item ja cadastrado
       if (request.status == 409) {
@@ -848,24 +791,15 @@ class RestClientGeneric<T> {
           }
         }
         return RestResponseGeneric<T>(
-            message: message,
-            exception: exception,
-            status: RestStatus.CONFLICT,
-            statusCode: request.status);
+            message: message, exception: exception, status: RestStatus.CONFLICT, statusCode: request.status);
       }
 
       return RestResponseGeneric(
-          message: message,
-          exception: exception,
-          status: RestStatus.DANGER,
-          statusCode: request.status);
+          message: message, exception: exception, status: RestStatus.DANGER, statusCode: request.status);
     } catch (e) {
       print('RestClientGeneric@deleteAll ${e}');
       return RestResponseGeneric(
-          message: '${e}',
-          exception: 'Exception ${e}',
-          status: RestStatus.DANGER,
-          statusCode: 400);
+          message: '${e}', exception: 'Exception ${e}', status: RestStatus.DANGER, statusCode: 400);
     }
   }
 
@@ -890,23 +824,14 @@ class RestClientGeneric<T> {
 
       if (request.status == 200) {
         return RestResponseGeneric(
-            message: 'Sucesso',
-            status: RestStatus.SUCCESS,
-            data: request.responseText,
-            statusCode: request.status);
+            message: 'Sucesso', status: RestStatus.SUCCESS, data: request.responseText, statusCode: request.status);
       }
       return RestResponseGeneric(
-          data: request.responseText,
-          message: 'Erro',
-          status: RestStatus.DANGER,
-          statusCode: request.status);
+          data: request.responseText, message: 'Erro', status: RestStatus.DANGER, statusCode: request.status);
     } catch (e) {
       print('RestClientGeneric@raw ${e}');
       return RestResponseGeneric(
-          message: '${e}',
-          exception: 'Exception ${e}',
-          status: RestStatus.DANGER,
-          statusCode: 400);
+          message: '${e}', exception: 'Exception ${e}', status: RestStatus.DANGER, statusCode: 400);
     }
   }
 }
