@@ -239,7 +239,7 @@ class RestClientGeneric<T> {
 
         var respBody = resp.body;
         if (encoding == 'utf8') {
-          respBody = utf8.encode(respBody).toString();
+          respBody = String.fromCharCodes(utf8.encode(respBody));
         }
 
         var jsonDecoded = jsonDecode(respBody);
@@ -391,7 +391,7 @@ class RestClientGeneric<T> {
           var respBody = resp.body;
 
           if (encoding == 'utf8') {
-            respBody = utf8.encode(respBody).toString();
+            respBody = String.fromCharCodes(utf8.encode(respBody));
           }
 
           var parsedJson = jsonDecode(respBody);
