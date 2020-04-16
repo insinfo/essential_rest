@@ -1,7 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 //import 'html_fake.dart' if (condition) 'dart:html';
-import 'package:universal_html/prefer_universal/html.dart';
+//import 'package:universal_html/prefer_universal/html.dart';
+
+//import 'package:universal_html/prefer_universal/html.dart' if (dart.library.io) 'package:universal_html/html.dart';
+//export '../src/html.dart' if (dart.library.html) '../src/_sdk/html.dart';
+
+import 'package:universal_html/prefer_universal/html.dart' if (dart.library.js) 'package:universal_html/html.dart';
+
 import 'package:http/http.dart' as http;
 import 'essential_uri.dart';
 import 'rest_response.dart';
@@ -25,8 +31,7 @@ class RestClient {
   static Map<String, String> headersDefault = {
     'Content-type': 'application/json',
     'Accept': 'application/json',
-    'Authorization':
-        'Bearer ' + window.sessionStorage['YWNjZXNzX3Rva2Vu'].toString()
+    'Authorization': 'Bearer ' + window.sessionStorage['YWNjZXNzX3Rva2Vu'].toString()
   };
 
   Uri uri(
@@ -50,9 +55,7 @@ class RestClient {
     }
 
     if (this.host == null) {
-      this.host = window.location.host.contains(':')
-          ? defaultHost
-          : window.location.host;
+      this.host = window.location.host.contains(':') ? defaultHost : window.location.host;
     }
 
     if (setHostFromBrowser) {
@@ -70,8 +73,7 @@ class RestClient {
     var scheme = '';
     if (protocol != null) {
       scheme = protocol;
-    } else if (this.protocol == ProtocolType.notDefine ||
-        this.protocol == null) {
+    } else if (this.protocol == ProtocolType.notDefine || this.protocol == null) {
       scheme = window.location.protocol.substring(0, proLen - 1);
       if (window.location.protocol.contains('memory')) {
         scheme = 'http';
@@ -128,9 +130,7 @@ class RestClient {
       resp = await client.get(url, headers: headers);
     }
 
-    var totalReH = resp.headers.containsKey('total-records')
-        ? resp.headers['total-records']
-        : null;
+    var totalReH = resp.headers.containsKey('total-records') ? resp.headers['total-records'] : null;
     var totalRecords = totalReH != null ? int.tryParse(totalReH) : 0;
     var jsonDecoded = jsonDecode(resp.body);
 
@@ -156,10 +156,7 @@ class RestClient {
         }
       }
 
-      return RestResponse(
-          message: message,
-          status: RestStatus.UNAUTHORIZED,
-          statusCode: resp.statusCode);
+      return RestResponse(message: message, status: RestStatus.UNAUTHORIZED, statusCode: resp.statusCode);
     }
 
     if (jsonDecoded is Map) {
@@ -171,11 +168,7 @@ class RestClient {
       }
     }
 
-    return RestResponse(
-        message: message,
-        exception: exception,
-        status: RestStatus.DANGER,
-        statusCode: resp.statusCode);
+    return RestResponse(message: message, exception: exception, status: RestStatus.DANGER, statusCode: resp.statusCode);
   }
 
   Future<RestResponse> put(
@@ -202,15 +195,11 @@ class RestClient {
 
     headers ??= headersDefault;
 
-    var resp = await client.put(url,
-        body: jsonEncode(body), encoding: encoding, headers: headers);
+    var resp = await client.put(url, body: jsonEncode(body), encoding: encoding, headers: headers);
 
     if (resp.statusCode == 200) {
       return RestResponse(
-          message: 'Sucesso',
-          status: RestStatus.SUCCESS,
-          data: jsonDecode(resp.body),
-          statusCode: resp.statusCode);
+          message: 'Sucesso', status: RestStatus.SUCCESS, data: jsonDecode(resp.body), statusCode: resp.statusCode);
     }
     var jsonDecoded = jsonDecode(resp.body);
     var message = '${resp.body}';
@@ -226,10 +215,7 @@ class RestClient {
         }
       }
 
-      return RestResponse(
-          message: message,
-          status: RestStatus.UNAUTHORIZED,
-          statusCode: resp.statusCode);
+      return RestResponse(message: message, status: RestStatus.UNAUTHORIZED, statusCode: resp.statusCode);
     }
 
     if (jsonDecoded is Map) {
@@ -241,11 +227,7 @@ class RestClient {
       }
     }
 
-    return RestResponse(
-        message: message,
-        exception: exception,
-        status: RestStatus.DANGER,
-        statusCode: resp.statusCode);
+    return RestResponse(message: message, exception: exception, status: RestStatus.DANGER, statusCode: resp.statusCode);
   }
 
   Future<RestResponse> post(
@@ -270,15 +252,11 @@ class RestClient {
 
     headers ??= headersDefault;
 
-    var resp = await client.post(url,
-        body: jsonEncode(body), encoding: Utf8Codec(), headers: headers);
+    var resp = await client.post(url, body: jsonEncode(body), encoding: Utf8Codec(), headers: headers);
 
     if (resp.statusCode == 200) {
       return RestResponse(
-          message: 'Sucesso',
-          status: RestStatus.SUCCESS,
-          data: jsonDecode(resp.body),
-          statusCode: resp.statusCode);
+          message: 'Sucesso', status: RestStatus.SUCCESS, data: jsonDecode(resp.body), statusCode: resp.statusCode);
     }
 
     var jsonDecoded = jsonDecode(resp.body);
@@ -295,10 +273,7 @@ class RestClient {
         }
       }
 
-      return RestResponse(
-          message: message,
-          status: RestStatus.UNAUTHORIZED,
-          statusCode: resp.statusCode);
+      return RestResponse(message: message, status: RestStatus.UNAUTHORIZED, statusCode: resp.statusCode);
     }
 
     if (jsonDecoded is Map) {
@@ -310,11 +285,7 @@ class RestClient {
       }
     }
 
-    return RestResponse(
-        message: message,
-        exception: exception,
-        status: RestStatus.DANGER,
-        statusCode: resp.statusCode);
+    return RestResponse(message: message, exception: exception, status: RestStatus.DANGER, statusCode: resp.statusCode);
   }
 
   Future<RestResponse> deleteAll(
@@ -368,10 +339,7 @@ class RestClient {
         }
       }
 
-      return RestResponse(
-          message: message,
-          status: RestStatus.UNAUTHORIZED,
-          statusCode: request.status);
+      return RestResponse(message: message, status: RestStatus.UNAUTHORIZED, statusCode: request.status);
     }
     //
 
@@ -384,10 +352,6 @@ class RestClient {
       }
     }
 
-    return RestResponse(
-        message: message,
-        exception: exception,
-        status: RestStatus.DANGER,
-        statusCode: request.status);
+    return RestResponse(message: message, exception: exception, status: RestStatus.DANGER, statusCode: request.status);
   }
 }

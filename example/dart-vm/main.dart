@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:essential_rest/essential_rest.dart';
 
 //entity model definition
@@ -27,12 +29,13 @@ class ExampleModel {
 }
 
 void main() async {
-  var rest = RestClientGeneric<ExampleModel>(
-      factory: {ExampleModel: (x) => ExampleModel.fromMap(x)});
+  print('start execution');
+  var rest = RestClientGeneric<ExampleModel>(factory: {ExampleModel: (x) => ExampleModel.fromMap(x)});
   rest.protocol = ProtocolType.https;
   rest.host = 'jsonplaceholder.typicode.com';
 
   //get list of ExampleModel
+  print('get list of ExampleModel');
   var resp = await rest.getAll('/todos');
   var list = resp.resultListT;
   list.forEach((item) {
@@ -45,7 +48,8 @@ void main() async {
   print('single item: ${item.title}');
 
   //create new item ExampleModel
-  var resps =
-      await rest.post('/todos', body: ExampleModel(title: 'test').toMap());
+  var resps = await rest.post('/todos', body: ExampleModel(title: 'test').toMap());
   print('create item: ${resps.status}');
+  print('end execution');
+  exit(0);
 }

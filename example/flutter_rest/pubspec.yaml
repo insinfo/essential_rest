@@ -11,7 +11,8 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^0.1.2
-  essential_rest: ^1.0.6
+  essential_rest: 
+    path: ../../
 
 dev_dependencies:
   flutter_test:

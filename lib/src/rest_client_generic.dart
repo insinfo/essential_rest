@@ -1,7 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 //import 'html_fake.dart' if (condition) 'dart:html';
-import 'package:universal_html/prefer_universal/html.dart';
+
+import 'package:universal_html/prefer_universal/html.dart' if (dart.library.js) 'package:universal_html/html.dart';
+//;
+//import 'dart:html' if (dart.library.html) 'html_fake.dart';
+
 import 'essential_uri.dart';
 //import 'map_serialization.dart';
 import 'rest_response.dart';
@@ -9,6 +13,9 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'response_list.dart';
 
+/// is an API to consume REST web services, it does the JSON mapping for the Entity,
+/// besides allowing to keep the data in CACHE using Local Storage for fast loading 
+/// and load reduction to the Server
 class RestClientGeneric<T> {
   final Map<Type, Function> factory; // = <Type, Function>{};
   //ex: DiskCache<Agenda>(factories: {Agenda: (x) => Agenda.fromJson(x)});
@@ -127,9 +134,28 @@ class RestClientGeneric<T> {
     return null;
   }*/
 
+  /// This method allows uploading files within the Web Browser
+  /// ```dart
+  ///  var fileInput = html.querySelector('body #fileInput') as html.FileUploadInputElement;
+  ///  if (fileInput != null && fileInput.files.isNotEmpty) {
+  ///    var rest = RestClientGeneric();
+  ///    var resp = await rest.uploadFiles(
+  ///      '/',
+  ///      fileInput.files as List<uhtml.File>,
+  ///      body: {'nome': 'Isaque'},
+  ///      protocol: 'http',
+  ///      hosting: 'localhost',
+  ///      hostPort: 8888,
+  ///      basePath: '',
+  ///    );
+  ///    print(resp.data);
+  ///  }
+  /// ```
+  /// [apiEndPoint] endpoint is the location from which APIs can access the resources 
+  /// [files] is list of dart:html File implementation
   Future<RestResponseGeneric<T>> uploadFiles(
     String apiEndPoint,
-    List<File> files, {
+    List<dynamic> files, {
     String topNode,
     Map<String, String> headers,
     Map<String, dynamic> body,
@@ -166,7 +192,7 @@ class RestClientGeneric<T> {
         request.fields['data'] = jsonEncode(body);
       }
 
-      if (files != null) {
+      if (files != null && files is File) {
         var reader = FileReader();
         for (var file in files) {
           reader.readAsArrayBuffer(file);
@@ -174,6 +200,8 @@ class RestClientGeneric<T> {
           request.files.add(await http.MultipartFile.fromBytes('file[]', reader.result,
               contentType: MediaType('application', 'octet-stream'), filename: file.name));
         }
+      } else {
+        throw Exception('RestClientGeneric@uploadFiles files cannot be null');
       }
 
       //fields.forEach((k, v) => request.fields[k] = v);
@@ -239,7 +267,8 @@ class RestClientGeneric<T> {
 
         var respBody = resp.body;
         if (encoding == 'utf8') {
-          respBody = String.fromCharCodes(resp.bodyBytes);
+          //String.fromCharCodes
+          respBody = utf8.decode(resp.bodyBytes);
         }
 
         var jsonDecoded = jsonDecode(respBody);
@@ -391,7 +420,7 @@ class RestClientGeneric<T> {
           var respBody = resp.body;
 
           if (encoding == 'utf8') {
-            respBody = String.fromCharCodes(resp.bodyBytes);
+            respBody = utf8.decode(resp.bodyBytes);
           }
 
           var parsedJson = jsonDecode(respBody);

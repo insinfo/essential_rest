@@ -13,6 +13,7 @@ class Window {
 }
 
 Window get window {
+  print('html_fake.dart');
   return Window();
 }
 
@@ -85,4 +86,5 @@ class HttpRequest {
 
   String responseText = 's';
 }
+
 */
