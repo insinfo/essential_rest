@@ -14,7 +14,7 @@ import 'package:http_parser/http_parser.dart';
 import 'response_list.dart';
 
 /// is an API to consume REST web services, it does the JSON mapping for the Entity,
-/// besides allowing to keep the data in CACHE using Local Storage for fast loading 
+/// besides allowing to keep the data in CACHE using Local Storage for fast loading
 /// and load reduction to the Server
 class RestClientGeneric<T> {
   final Map<Type, Function> factory; // = <Type, Function>{};
@@ -151,11 +151,12 @@ class RestClientGeneric<T> {
   ///    print(resp.data);
   ///  }
   /// ```
-  /// [apiEndPoint] endpoint is the location from which APIs can access the resources 
+  /// [apiEndPoint] endpoint is the location from which APIs can access the resources
   /// [files] is list of dart:html File implementation
+  /// [topNode] is the key of the JSON tree node that contains the data that you want to be returned
   Future<RestResponseGeneric<T>> uploadFiles(
     String apiEndPoint,
-    List<dynamic> files, {
+    List<File> files, {
     String topNode,
     Map<String, String> headers,
     Map<String, dynamic> body,
@@ -191,8 +192,8 @@ class RestClientGeneric<T> {
       if (body != null) {
         request.fields['data'] = jsonEncode(body);
       }
-
-      if (files != null && files is File) {
+      //&& files is File
+      if (files != null) {
         var reader = FileReader();
         for (var file in files) {
           reader.readAsArrayBuffer(file);
@@ -221,7 +222,24 @@ class RestClientGeneric<T> {
       return RestResponseGeneric(message: 'Erro ${e}', status: RestStatus.DANGER, statusCode: 400);
     }
   }
-
+  
+  /// This method is to return a list of entities from the REST API
+  /// example:
+  /// ```dart
+  ///   var rest = RestClientGeneric<ExampleModel>(factory: {ExampleModel: (x) => ExampleModel.fromMap(x)});
+  ///   rest.protocol = ProtocolType.https;
+  ///   rest.host = 'jsonplaceholder.typicode.com';
+  /// 
+  ///   var resp = await rest.getAll('/todos');
+  ///   var list = resp.resultListT;
+  ///   list.forEach((item) {
+  ///     print('list item: ${item.title}');
+  ///   });
+  /// ```
+  /// [apiEndPoint] endpoint is the location from which APIs can access the resources
+  /// [forceRefresh] is to say whether the data will come from the cache or from the REST API if CACHE is enabled
+  /// [topNode] is the key of the JSON tree node that contains the data that you want to be returned
+  /// [method] method is an option for an extraordinary case where you want to receive the data using the POST or PUT method instead of the traditional GET
   Future<RestResponseGeneric<T>> getAll(
     String apiEndPoint, {
     bool forceRefresh = false,
@@ -256,6 +274,8 @@ class RestClientGeneric<T> {
           resp = await client.get(url, headers: headers);
         } else if (method == RestClientMethod.POST) {
           resp = await client.post(url, headers: headers, body: jsonEncode(body));
+        } else if (method == RestClientMethod.PUT) {
+          resp = await client.put(url, headers: headers, body: jsonEncode(body));
         } else {
           resp = await client.get(url, headers: headers);
         }
