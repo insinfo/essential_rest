@@ -127,7 +127,7 @@ class RestClientGeneric<T> {
     client = http.Client();
   }
 
-  /// Todo implementar
+  // Todo implementar
   /*Future<RestResponseGeneric<T>> getAllT<T>(String apiEndPoint,
       {bool forceRefresh = false, String topNode, Map<String, String> headers, Map<String, String> queryParameters}) {
     throw UnimplementedError('This feature is not implemented yet.');
@@ -154,12 +154,15 @@ class RestClientGeneric<T> {
   /// [apiEndPoint] endpoint is the location from which APIs can access the resources
   /// [files] is list of dart:html File implementation
   /// [topNode] is the key of the JSON tree node that contains the data that you want to be returned
+  /// [body] is de aditional data to send to backend Map<String, dynamic> or string of json or other
+  /// [bodyEncoding] is de encode of body content utf8 | latin1
   Future<RestResponseGeneric<T>> uploadFiles(
     String apiEndPoint,
     List<File> files, {
     String topNode,
     Map<String, String> headers,
-    Map<String, dynamic> body,
+    dynamic body,
+    String bodyEncoding,
     Map<String, String> queryParameters,
     String basePath,
     String protocol,
@@ -190,7 +193,17 @@ class RestClientGeneric<T> {
       }
 
       if (body != null) {
-        request.fields['data'] = jsonEncode(body);
+        if (body is Map<String, dynamic>) {
+          if (bodyEncoding == null) {
+            request.fields['data'] = jsonEncode(body);
+          } else if (bodyEncoding == 'utf8') {
+            request.fields['data'] = jsonEncode(body);
+            //ISO-8859-1
+          } else if (bodyEncoding == 'latin1') {
+            var latin1Bytes = latin1.encode(jsonEncode(body));
+            request.fields['data'] = latin1Bytes.toString();
+          }
+        }
       }
       //&& files is File
       if (files != null) {
@@ -218,18 +231,19 @@ class RestClientGeneric<T> {
         statusCode: 200,
       );
     } catch (e, stacktrace) {
-      print('RestClientGeneric@uploadFiles exception: ${e} stacktrace: ${stacktrace}');
-      return RestResponseGeneric(message: 'Erro ${e}', status: RestStatus.DANGER, statusCode: 400);
+      var ex = 'RestClientGeneric@uploadFiles exception: ${e} stacktrace: ${stacktrace}';
+      print(ex);
+      return RestResponseGeneric(exception: ex, message: ex, status: RestStatus.DANGER, statusCode: 400);
     }
   }
-  
+
   /// This method is to return a list of entities from the REST API
   /// example:
   /// ```dart
   ///   var rest = RestClientGeneric<ExampleModel>(factory: {ExampleModel: (x) => ExampleModel.fromMap(x)});
   ///   rest.protocol = ProtocolType.https;
   ///   rest.host = 'jsonplaceholder.typicode.com';
-  /// 
+  ///
   ///   var resp = await rest.getAll('/todos');
   ///   var list = resp.resultListT;
   ///   list.forEach((item) {
@@ -381,9 +395,10 @@ class RestClientGeneric<T> {
           status: RestStatus.SUCCESS,
           dataTypedList: list,
           statusCode: 200);
-    } catch (e) {
-      print('RestClientGeneric@getAll ${e}');
-      return RestResponseGeneric(message: 'Erro ${e}', status: RestStatus.DANGER, statusCode: 400);
+    } catch (e, stacktrace) {
+      var ex = 'RestClientGeneric@getAll exception: ${e} stacktrace: ${stacktrace}';
+      print(ex);
+      return RestResponseGeneric(exception: ex, message: ex, status: RestStatus.DANGER, statusCode: 400);
     }
   }
 
@@ -504,10 +519,10 @@ class RestClientGeneric<T> {
 
       return RestResponseGeneric<T>(
           totalRecords: 10, message: 'Sucesso', status: RestStatus.SUCCESS, dataTyped: result, statusCode: 200);
-    } catch (e) {
-      print('RestClientGeneric@get ${e}');
-      return RestResponseGeneric(
-          message: 'Erro ${e}', exception: 'Exception ${e}', status: RestStatus.DANGER, statusCode: 400);
+    } catch (e, stacktrace) {
+      var ex = 'RestClientGeneric@get exception: ${e} stacktrace: ${stacktrace}';
+      print(ex);
+      return RestResponseGeneric(exception: ex, message: ex, status: RestStatus.DANGER, statusCode: 400);
     }
   }
 
@@ -652,10 +667,10 @@ class RestClientGeneric<T> {
       }
 
       return RestResponseGeneric(message: message, status: RestStatus.DANGER, statusCode: resp.statusCode);
-    } catch (e) {
-      print('RestClientGeneric@put ${e}');
-      return RestResponseGeneric(
-          message: '${e}', exception: 'Exception ${e}', status: RestStatus.DANGER, statusCode: 400);
+    } catch (e, stacktrace) {
+      var ex = 'RestClientGeneric@put exception: ${e} stacktrace: ${stacktrace}';
+      print(ex);
+      return RestResponseGeneric(exception: ex, message: ex, status: RestStatus.DANGER, statusCode: 400);
     }
   }
 
@@ -742,14 +757,10 @@ class RestClientGeneric<T> {
         data: jsonDecoded,
         statusCode: resp.statusCode,
       );
-    } catch (e) {
-      print('RestClientGeneric@post ${e}');
-      return RestResponseGeneric(
-        message: '${e}',
-        exception: 'Exception ${e}',
-        status: RestStatus.DANGER,
-        statusCode: 400,
-      );
+    } catch (e, stacktrace) {
+      var ex = 'RestClientGeneric@post exception: ${e} stacktrace: ${stacktrace}';
+      print(ex);
+      return RestResponseGeneric(exception: ex, message: ex, status: RestStatus.DANGER, statusCode: 400);
     }
   }
 
@@ -845,10 +856,10 @@ class RestClientGeneric<T> {
 
       return RestResponseGeneric(
           message: message, exception: exception, status: RestStatus.DANGER, statusCode: request.status);
-    } catch (e) {
-      print('RestClientGeneric@deleteAll ${e}');
-      return RestResponseGeneric(
-          message: '${e}', exception: 'Exception ${e}', status: RestStatus.DANGER, statusCode: 400);
+    } catch (e, stacktrace) {
+      var ex = 'RestClientGeneric@deleteAll exception: ${e} stacktrace: ${stacktrace}';
+      print(ex);
+      return RestResponseGeneric(exception: ex, message: ex, status: RestStatus.DANGER, statusCode: 400);
     }
   }
 
@@ -877,10 +888,10 @@ class RestClientGeneric<T> {
       }
       return RestResponseGeneric(
           data: request.responseText, message: 'Erro', status: RestStatus.DANGER, statusCode: request.status);
-    } catch (e) {
-      print('RestClientGeneric@raw ${e}');
-      return RestResponseGeneric(
-          message: '${e}', exception: 'Exception ${e}', status: RestStatus.DANGER, statusCode: 400);
+    } catch (e, stacktrace) {
+      var ex = 'RestClientGeneric@raw exception: ${e} stacktrace: ${stacktrace}';
+      print(ex);
+      return RestResponseGeneric(exception: ex, message: ex, status: RestStatus.DANGER, statusCode: 400);
     }
   }
 }
