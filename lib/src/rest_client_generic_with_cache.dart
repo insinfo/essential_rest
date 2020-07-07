@@ -14,9 +14,31 @@ import 'package:http_parser/http_parser.dart';
 import 'response_list.dart';
 
 /// is an API to consume REST web services, it does the JSON mapping for the Entity,
-/// ex: RestClientGeneric<Agenda>(factories: {Agenda: (x) => Agenda.fromJson(x)});
-class RestClientGeneric<T> {
+/// besides allowing to keep the data in CACHE using Local Storage for fast loading
+/// and load reduction to the Server
+class RestClientGenericCache<T> {
   final Map<Type, Function> factory; // = <Type, Function>{};
+  //ex: DiskCache<Agenda>(factories: {Agenda: (x) => Agenda.fromJson(x)});
+
+  //cache duration
+  Duration cacheValidDuration = Duration(minutes: 30);
+  //disabilita o cache
+  bool _disableAllCache = true;
+
+  bool get disableAllCache {
+    return _disableAllCache;
+  }
+
+  set disableAllCache(bool disable) {
+    _disableAllCache = disable;
+  }
+
+  //check if is update the cache
+  bool _isShouldRefresh(String key) {
+    return (isInLocalStorage(key) == false ||
+        _getLastFetchTime(key) == null ||
+        _getLastFetchTime(key).isBefore(DateTime.now().subtract(cacheValidDuration)));
+  }
 
   http.Client client;
   ProtocolType protocol;
@@ -27,9 +49,10 @@ class RestClientGeneric<T> {
   int port;
   String basePath = '';
 
-  static RestClientGeneric _instance;
-  RestClientGeneric getInstance() {
-    _instance ??= RestClientGeneric();
+  //EssentialUri _uriMuProto;
+  static RestClientGenericCache _instance;
+  RestClientGenericCache getInstance() {
+    _instance ??= RestClientGenericCache();
     return _instance;
   }
 
@@ -39,7 +62,7 @@ class RestClientGeneric<T> {
     'Authorization': 'Bearer ' + window.sessionStorage['YWNjZXNzX3Rva2Vu'].toString()
   };
 
-  Uri _uri(
+  Uri uri(
     String apiEndPoint, {
     Map<String, String> queryParameters,
     String basePath,
@@ -89,6 +112,8 @@ class RestClientGeneric<T> {
       scheme = 'http';
     }
 
+    //queryParameters ??= {};
+
     return Uri(
         scheme: scheme,
         userInfo: '',
@@ -98,7 +123,7 @@ class RestClientGeneric<T> {
         queryParameters: queryParameters);
   }
 
-  RestClientGeneric({this.factory}) {
+  RestClientGenericCache({this.factory}) {
     client = http.Client();
   }
 
@@ -145,7 +170,7 @@ class RestClientGeneric<T> {
     int hostPort,
   }) async {
     try {
-      var url = _uri(
+      var url = uri(
         apiEndPoint,
         queryParameters: queryParameters,
         protocol: protocol,
@@ -154,7 +179,11 @@ class RestClientGeneric<T> {
         basePath: basePath,
       );
 
-      var headersDefault = {'Authorization': 'Bearer ' + window.sessionStorage['YWNjZXNzX3Rva2Vu'].toString()};
+      var headersDefault = {
+        //'Content-type': 'application/json',
+        // 'Accept': 'application/json',
+        'Authorization': 'Bearer ' + window.sessionStorage['YWNjZXNzX3Rva2Vu'].toString()
+      };
       var request = http.MultipartRequest('POST', url);
 
       if (headers != null) {
@@ -240,7 +269,7 @@ class RestClientGeneric<T> {
     String encoding,
   }) async {
     try {
-      var url = _uri(
+      var url = uri(
         apiEndPoint,
         queryParameters: queryParameters,
         protocol: protocol,
@@ -251,91 +280,118 @@ class RestClientGeneric<T> {
 
       headers ??= headersDefault;
 
-      http.Response resp;
-      if (method == null) {
-        resp = await client.get(url, headers: headers);
-      } else if (method == RestClientMethod.POST) {
-        resp = await client.post(url, headers: headers, body: jsonEncode(body));
-      } else if (method == RestClientMethod.PUT) {
-        resp = await client.put(url, headers: headers, body: jsonEncode(body));
-      } else {
-        resp = await client.get(url, headers: headers);
-      }
-
-      var totalReH = resp.headers.containsKey('total-records') ? resp.headers['total-records'] : null;
-      var totalRecords = totalReH != null ? int.tryParse(totalReH) : 0;
-      var message = '${resp.body}';
-      var exception = '${resp.body}';
-
-      var respBody = resp.body;
-      if (encoding == 'utf8') {
-        //String.fromCharCodes
-        respBody = utf8.decode(resp.bodyBytes);
-      }
-
-      var jsonDecoded = jsonDecode(respBody);
-      //print("from API");
-      if (resp.statusCode == 200) {
-        var list = RList<T>();
-        list.totalRecords = totalRecords;
-        if (topNode != null) {
-          jsonDecoded[topNode].forEach((item) {
-            list.add(factory[T](item));
-          });
+      //Obtem da REST API se o cache estiver vazio, vencido ou desativado
+      if (_isShouldRefresh(url.toString()) || forceRefresh || _disableAllCache == true) {
+        //var resp = await client.get(url, headers: headers);
+        http.Response resp;
+        if (method == null) {
+          resp = await client.get(url, headers: headers);
+        } else if (method == RestClientMethod.POST) {
+          resp = await client.post(url, headers: headers, body: jsonEncode(body));
+        } else if (method == RestClientMethod.PUT) {
+          resp = await client.put(url, headers: headers, body: jsonEncode(body));
         } else {
-          jsonDecoded.forEach((item) {
-            list.add(factory[T](item));
-          });
+          resp = await client.get(url, headers: headers);
         }
 
-        return RestResponseGeneric<T>(
-            headers: resp.headers,
-            totalRecords: totalRecords,
-            message: 'Sucesso',
-            status: RestStatus.SUCCESS,
-            dataTypedList: list,
-            statusCode: resp.statusCode);
-      }
-      //exibe mensagem se de erro de não autorizado
-      if (resp.statusCode == 401) {
-        var jsonDecoded = jsonDecode(resp.body);
-        if (jsonDecoded is Map) {
-          if (jsonDecoded.containsKey('message')) {
-            message = jsonDecoded['message'];
-          }
-          if (jsonDecoded.containsKey('exception')) {
-            exception = jsonDecoded['exception'];
-          }
+        var totalReH = resp.headers.containsKey('total-records') ? resp.headers['total-records'] : null;
+        var totalRecords = totalReH != null ? int.tryParse(totalReH) : 0;
+        var message = '${resp.body}';
+        var exception = '${resp.body}';
+
+        var respBody = resp.body;
+        if (encoding == 'utf8') {
+          //String.fromCharCodes
+          respBody = utf8.decode(resp.bodyBytes);
         }
 
-        return RestResponseGeneric<T>(
-            message: message, exception: exception, status: RestStatus.UNAUTHORIZED, statusCode: resp.statusCode);
-      }
-      //um item ja cadastrado
-      if (resp.statusCode == 409) {
-        var jsonDecoded = jsonDecode(resp.body);
-        if (jsonDecoded is Map) {
-          if (jsonDecoded.containsKey('message')) {
-            message = jsonDecoded['message'];
+        var jsonDecoded = jsonDecode(respBody);
+        //print("from API");
+        if (resp.statusCode == 200) {
+          //coloca no cache
+          if (_disableAllCache == false) {
+            _setToLocalStorage(url.toString(), resp.body, headers: resp.headers);
           }
-          if (jsonDecoded.containsKey('exception')) {
-            exception = jsonDecoded['exception'];
+
+          var list = RList<T>();
+          list.totalRecords = totalRecords;
+          if (topNode != null) {
+            jsonDecoded[topNode].forEach((item) {
+              list.add(factory[T](item));
+            });
+          } else {
+            jsonDecoded.forEach((item) {
+              list.add(factory[T](item));
+            });
           }
+
+          return RestResponseGeneric<T>(
+              headers: resp.headers,
+              totalRecords: totalRecords,
+              message: 'Sucesso',
+              status: RestStatus.SUCCESS,
+              dataTypedList: list,
+              statusCode: resp.statusCode);
         }
-        return RestResponseGeneric<T>(
-            message: message, exception: exception, status: RestStatus.CONFLICT, statusCode: resp.statusCode);
+        //exibe mensagem se de erro de não autorizado
+        if (resp.statusCode == 401) {
+          var jsonDecoded = jsonDecode(resp.body);
+          if (jsonDecoded is Map) {
+            if (jsonDecoded.containsKey('message')) {
+              message = jsonDecoded['message'];
+            }
+            if (jsonDecoded.containsKey('exception')) {
+              exception = jsonDecoded['exception'];
+            }
+          }
+
+          return RestResponseGeneric<T>(
+              message: message, exception: exception, status: RestStatus.UNAUTHORIZED, statusCode: resp.statusCode);
+        }
+        //um item ja cadastrado
+        if (resp.statusCode == 409) {
+          var jsonDecoded = jsonDecode(resp.body);
+          if (jsonDecoded is Map) {
+            if (jsonDecoded.containsKey('message')) {
+              message = jsonDecoded['message'];
+            }
+            if (jsonDecoded.containsKey('exception')) {
+              exception = jsonDecoded['exception'];
+            }
+          }
+          return RestResponseGeneric<T>(
+              message: message, exception: exception, status: RestStatus.CONFLICT, statusCode: resp.statusCode);
+        }
+        //204 no content tabela vazia ou nenhum item correspondente
+        else if (resp.statusCode == 204) {
+          return RestResponseGeneric<T>(
+              message: 'no content found',
+              exception: exception,
+              status: RestStatus.NOCONTENT,
+              statusCode: resp.statusCode);
+        } else {
+          return RestResponseGeneric<T>(
+              message: message, exception: exception, status: RestStatus.DANGER, statusCode: resp.statusCode);
+        }
+      } //fim
+
+      print('RestClientGeneric@getAll from Cache');
+
+      Map result = _getAllFromCache(url.toString());
+      RList list = result['data'];
+      var totalRecords;
+      if (result['headers'].containsKey('total-records')) {
+        totalRecords = int.tryParse(result['headers']['total-records']);
+        list.totalRecords = totalRecords;
       }
-      //204 no content tabela vazia ou nenhum item correspondente
-      else if (resp.statusCode == 204) {
-        return RestResponseGeneric<T>(
-            message: 'no content found',
-            exception: exception,
-            status: RestStatus.NOCONTENT,
-            statusCode: resp.statusCode);
-      } else {
-        return RestResponseGeneric<T>(
-            message: message, exception: exception, status: RestStatus.DANGER, statusCode: resp.statusCode);
-      }
+
+      return RestResponseGeneric<T>(
+          headers: result['headers'],
+          totalRecords: totalRecords,
+          message: 'Sucesso',
+          status: RestStatus.SUCCESS,
+          dataTypedList: list,
+          statusCode: 200);
     } catch (e, stacktrace) {
       var ex = 'RestClientGeneric@getAll exception: ${e} stacktrace: ${stacktrace}';
       print(ex);
@@ -358,7 +414,7 @@ class RestClientGeneric<T> {
     String encoding,
   }) async {
     try {
-      var url = _uri(
+      var url = uri(
         apiEndPoint,
         queryParameters: queryParameters,
         protocol: protocol,
@@ -369,87 +425,169 @@ class RestClientGeneric<T> {
 
       headers ??= headersDefault;
 
-      http.Response resp;
-      if (method == null) {
-        resp = await client.get(url, headers: headers);
-      } else if (method == RestClientMethod.POST) {
-        resp = await client.post(url, headers: headers, body: jsonEncode(body));
-      } else {
-        resp = await client.get(url, headers: headers);
-      }
-
-      var message = '${resp.body}';
-      var exception = '${resp.body}';
-      var totalReH = resp.headers.containsKey('total-records') ? resp.headers['total-records'] : null;
-      var totalRecords = totalReH != null ? int.tryParse(totalReH) : 0;
-      //se ouver sucesso
-      if (resp.statusCode == 200) {
-        var result;
-        var respBody = resp.body;
-
-        if (encoding == 'utf8') {
-          respBody = utf8.decode(resp.bodyBytes);
-        }
-
-        var parsedJson = jsonDecode(respBody);
-        if (topNode != null) {
-          result = factory[T](parsedJson[topNode]);
+      //Obtem da REST API se o cache estivar vazio ou vencido
+      if (_isShouldRefresh(url.toString()) || forceRefresh || _disableAllCache == true) {
+        //var resp = await client.get(url, headers: headers);
+        http.Response resp;
+        if (method == null) {
+          resp = await client.get(url, headers: headers);
+        } else if (method == RestClientMethod.POST) {
+          resp = await client.post(url, headers: headers, body: jsonEncode(body));
         } else {
-          result = factory[T](parsedJson); // Empenho.fromJson(json);
+          resp = await client.get(url, headers: headers);
         }
 
-        return RestResponseGeneric<T>(
-            totalRecords: totalRecords,
-            message: 'Sucesso',
-            status: RestStatus.SUCCESS,
-            dataTyped: result,
-            statusCode: resp.statusCode);
-      }
-      //exibe mensagem se de erro não autorizado
-      else if (resp.statusCode == 401) {
-        var jsonDecoded = jsonDecode(resp.body);
-        if (jsonDecoded is Map) {
-          if (jsonDecoded.containsKey('message')) {
-            message = jsonDecoded['message'];
+        var message = '${resp.body}';
+        var exception = '${resp.body}';
+        var totalReH = resp.headers.containsKey('total-records') ? resp.headers['total-records'] : null;
+        var totalRecords = totalReH != null ? int.tryParse(totalReH) : 0;
+        //se ouver sucesso
+        if (resp.statusCode == 200) {
+          //coloca no cache
+          if (_disableAllCache == false) {
+            _setToLocalStorage(url.toString(), resp.body, headers: resp.headers);
           }
-          if (jsonDecoded.containsKey('exception')) {
-            exception = jsonDecoded['exception'];
-          }
-        }
 
-        return RestResponseGeneric<T>(
-            message: message, exception: exception, status: RestStatus.UNAUTHORIZED, statusCode: resp.statusCode);
-      }
-      //um item ja cadastrado
-      if (resp.statusCode == 409) {
-        var jsonDecoded = jsonDecode(resp.body);
-        if (jsonDecoded is Map) {
-          if (jsonDecoded.containsKey('message')) {
-            message = jsonDecoded['message'];
+          var result;
+          var respBody = resp.body;
+
+          if (encoding == 'utf8') {
+            respBody = utf8.decode(resp.bodyBytes);
           }
-          if (jsonDecoded.containsKey('exception')) {
-            exception = jsonDecoded['exception'];
+
+          var parsedJson = jsonDecode(respBody);
+          if (topNode != null) {
+            result = factory[T](parsedJson[topNode]);
+          } else {
+            result = factory[T](parsedJson); // Empenho.fromJson(json);
           }
+
+          return RestResponseGeneric<T>(
+              totalRecords: totalRecords,
+              message: 'Sucesso',
+              status: RestStatus.SUCCESS,
+              dataTyped: result,
+              statusCode: resp.statusCode);
         }
-        return RestResponseGeneric<T>(
-            message: message, exception: exception, status: RestStatus.CONFLICT, statusCode: resp.statusCode);
+        //exibe mensagem se de erro não autorizado
+        else if (resp.statusCode == 401) {
+          var jsonDecoded = jsonDecode(resp.body);
+          if (jsonDecoded is Map) {
+            if (jsonDecoded.containsKey('message')) {
+              message = jsonDecoded['message'];
+            }
+            if (jsonDecoded.containsKey('exception')) {
+              exception = jsonDecoded['exception'];
+            }
+          }
+
+          return RestResponseGeneric<T>(
+              message: message, exception: exception, status: RestStatus.UNAUTHORIZED, statusCode: resp.statusCode);
+        }
+        //um item ja cadastrado
+        if (resp.statusCode == 409) {
+          var jsonDecoded = jsonDecode(resp.body);
+          if (jsonDecoded is Map) {
+            if (jsonDecoded.containsKey('message')) {
+              message = jsonDecoded['message'];
+            }
+            if (jsonDecoded.containsKey('exception')) {
+              exception = jsonDecoded['exception'];
+            }
+          }
+          return RestResponseGeneric<T>(
+              message: message, exception: exception, status: RestStatus.CONFLICT, statusCode: resp.statusCode);
+        }
+        //no content
+        else if (resp.statusCode == 204) {
+          return RestResponseGeneric<T>(
+              message: 'no content found',
+              exception: exception,
+              status: RestStatus.NOCONTENT,
+              statusCode: resp.statusCode);
+        } else {
+          return RestResponseGeneric<T>(
+              message: message, exception: exception, status: RestStatus.DANGER, statusCode: resp.statusCode);
+        }
       }
-      //no content
-      else if (resp.statusCode == 204) {
-        return RestResponseGeneric<T>(
-            message: 'no content found',
-            exception: exception,
-            status: RestStatus.NOCONTENT,
-            statusCode: resp.statusCode);
-      } else {
-        return RestResponseGeneric<T>(
-            message: message, exception: exception, status: RestStatus.DANGER, statusCode: resp.statusCode);
-      }
+      print('RestClientGeneric@get from Cache');
+
+      Map data = _getFromCache(url.toString());
+      var result = data['data'];
+
+      return RestResponseGeneric<T>(
+          totalRecords: 10, message: 'Sucesso', status: RestStatus.SUCCESS, dataTyped: result, statusCode: 200);
     } catch (e, stacktrace) {
       var ex = 'RestClientGeneric@get exception: ${e} stacktrace: ${stacktrace}';
       print(ex);
       return RestResponseGeneric(exception: ex, message: ex, status: RestStatus.DANGER, statusCode: 400);
     }
+  }
+
+  Map<String, dynamic> _getAllFromCache(String key) {
+    var obj = _getFromLocalStorage(key);
+    if (obj != null) {
+      List json = jsonDecode(obj['data']);
+      var list = RList<T>();
+      json.forEach((item) {
+        list.add(factory[T](item));
+      });
+      //return list;
+      return {'data': list, 'headers': obj['headers']};
+    } else {
+      return null;
+    }
+  }
+
+  Map<String, dynamic> _getFromCache(String key) {
+    var obj = _getFromLocalStorage(key);
+    if (obj != null) {
+      Map map = jsonDecode(obj['data']);
+      //return factories[T](map);
+      return {'data': factory[T](map), 'headers': obj['headers']};
+    } else {
+      return null;
+    }
+  }
+
+  Map<String, dynamic> _getFromLocalStorage(String key) {
+    if (window.localStorage.containsKey(key)) {
+      var headers;
+      if (window.localStorage.containsKey('headers' + key)) {
+        headers = window.localStorage['headers' + key];
+      }
+      return {'data': window.localStorage[key], 'headers': jsonDecode(headers)};
+    } else {
+      return null;
+    }
+  }
+
+  bool isInLocalStorage(String key) {
+    if (window.localStorage.containsKey(key)) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  void _setToLocalStorage(String key, String value, {Map<String, String> headers}) {
+    _setLastFetchTime(key, DateTime.now());
+    window.localStorage[key] = value;
+    if (headers != null) {
+      window.localStorage['headers' + key] = jsonEncode(headers);
+    }
+  }
+
+  DateTime _getLastFetchTime(String key) {
+    if (window.localStorage.containsKey('fetchTime' + key)) {
+      return DateTime.parse(window.localStorage['fetchTime' + key]);
+    } else {
+      return null;
+    }
+  }
+
+  void _setLastFetchTime(String key, DateTime date) {
+    window.localStorage['fetchTime' + key] = date.toString();
   }
 
   Future<RestResponseGeneric> put(
@@ -464,7 +602,7 @@ class RestClientGeneric<T> {
     int hostPort,
   }) async {
     try {
-      var url = _uri(
+      var url = uri(
         apiEndPoint,
         queryParameters: queryParameters,
         protocol: protocol,
@@ -584,7 +722,7 @@ class RestClientGeneric<T> {
     ReturnType returnType,
   }) async {
     try {
-      var url = _uri(
+      var url = uri(
         apiEndPoint,
         queryParameters: queryParameters,
         protocol: protocol,
@@ -636,7 +774,7 @@ class RestClientGeneric<T> {
     int hostPort,
   }) async {
     try {
-      var url = _uri(
+      var url = uri(
         apiEndPoint,
         queryParameters: queryParameters,
         protocol: protocol,

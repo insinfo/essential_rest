@@ -3,8 +3,8 @@ import 'package:example/models/example_model.dart';
 import 'package:example/services/example_service.dart';
 
 //import 'package:universal_html/html.dart' as html;
-import 'package:universal_html/prefer_universal/html.dart' as uhtml;
-import 'dart:html' as html;
+//import 'package:universal_html/prefer_universal/html.dart' as uhtml;
+//import 'dart:html' as html;
 
 import 'package:essential_rest/essential_rest.dart';
 
@@ -27,7 +27,7 @@ class RestExamplePage implements OnInit {
   RestExamplePage() {
     service = ExampleService();
   }
-  
+
   @override
   void ngOnInit() async {
     var resp = await service.getAll();
